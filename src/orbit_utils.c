@@ -1,6 +1,7 @@
-#include "time_utils.h"
 #include "raylib.h"
 #include <math.h>
+
+static const double JULIAN_CENTURY = 36525.0f;
 
 typedef enum {
     MERCURY, 
@@ -27,6 +28,10 @@ typedef struct {
     double mean_longitude_rate;         // deg/Cy
     double perihelion_longitude_rate;   // deg/Cy
 } planet_t;
+
+typedef struct {
+    double x, y
+} vec2d_t;
 
 static const planet_t PLANETS[PLANET_COUNT] = {
     // from table 1: https://ssd.jpl.nasa.gov/planets/approx_pos.html
@@ -74,4 +79,30 @@ double solve_kepler(double M, double e)
         E -= (E - e*sin(E) - M) / (1 - e*cos(E));
     }
     return E;
+}
+
+// returns a planet's (x, y) position in AU at a specified time
+vec2d_t get_planet_pos(const planet_t *planet, double sim_date)
+{
+    double centuries = sim_date / JULIAN_CENTURY;
+
+    // calculate new values using rates of change over julian century
+    double majr_axis = planet->semimajor_axis + (planet->semimajor_axis_rate * centuries);
+    double ecc = planet->eccentricity + (planet->eccentricity_rate * centuries);
+    double mean_long = (planet->mean_longitude + (planet->mean_longitude_rate * centuries)) *DEG2RAD;
+    double peri_long = (planet->perihelion_longitude + (planet->perihelion_longitude_rate * centuries)) *DEG2RAD;
+
+    // get mean anomaly, eccentric anomaly, and minor axis from updated values
+    double mean_anomaly = fmod(mean_long - peri_long, 2.0f * PI); // or remainder()???
+    double ecc_anomaly = solve_kepler(mean_anomaly, ecc);
+    double minr_axis = majr_axis * sqrt(1 - pow(ecc, 2));
+
+    double x_prm = majr_axis * (cos(ecc_anomaly) - ecc);
+    double y_prm = minr_axis * sin(ecc_anomaly);
+
+    // updated x and y positions
+    vec2d_t v;
+    v.x = x_prm * cos(peri_long) - y_prm * sin(peri_long);
+    v.y = x_prm * sin(peri_long) - y_prm * cos(peri_long);
+    return v;
 }
