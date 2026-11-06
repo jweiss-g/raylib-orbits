@@ -1,45 +1,60 @@
 #include "raylib.h"
+#include "time_utils.h"
+#include "orbit_utils.h"
 #include <math.h>
 
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+
 typedef struct {
-    float distance;
-    float angle;
-    float speed;
-    float radius;
+    double x;
+    double y;
+    int radius;
     Color colour;
-} Planet;
+} rendered_planet_t;
 
 int main(void)
 {
-    const int screenWidth = 800;
-    const int screenHeight = 800;
-    InitWindow(screenWidth, screenHeight, "orbits");
+    const int SCREEN_WIDTH = 800;
+    const int SCREEN_HEIGHT = 800;
+    double max_radius = MIN(SCREEN_WIDTH, SCREEN_HEIGHT) / 2 - 10;
+    double au_scale = max_radius / sqrt(PLANETS[NEPTUNE].semimajor_axis);
 
-    Vector2 sun_center = { (float)screenWidth / 2.0f, (float)screenHeight / 2.0f };
+    rendered_planet_t rendered_planets[PLANET_COUNT] = {
+        [MERCURY] = { 0, 0, 4, GRAY },
+        [VENUS]   = { 0, 0, 4, BEIGE },
+        [EARTH]   = { 0, 0, 6, SKYBLUE },
+        [MARS]    = { 0, 0, 6, MAROON },
+        [JUPITER] = { 0, 0, 12, BEIGE },
+        [SATURN]  = { 0, 0, 10, BEIGE },
+        [URANUS]  = { 0, 0, 8, BLUE },
+        [NEPTUNE] = { 0, 0, 8, DARKBLUE },
+    };
+
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "orbits");
+
+    vec2d_t sun_pos = { (double)SCREEN_WIDTH / 2.0, (double)SCREEN_HEIGHT / 2.0 };
 
     SetTargetFPS(60);
 
-    Planet earth = {100.0f, 0.0f, 0.015f, 10.0f, SKYBLUE};
-    earth.angle += earth.speed;
-    
-    if (earth.angle > 2.0f * PI) {
-        earth.angle -= 2.0f * PI;
-    }
-
+    double days_per_second = 30.0f;                     // sim time scale
+    double sim_date = days_since_j2000(2000, 1, 1);
 
     while (!WindowShouldClose())
     {
-        earth.angle += earth.speed;
-        
+        sim_date += GetFrameTime() * days_per_second;
         BeginDrawing();
+            DrawText(TextFormat("Elapsed Time: %.2f", sim_date), 10, 10, 12, GRAY);
             ClearBackground(BLACK);
-            DrawCircleV(sun_center, 40, YELLOW);
-
-            Vector2 earth_pos;
-            earth_pos.x = sun_center.x + earth.distance * cosf(earth.angle);
-            earth_pos.y = sun_center.y + earth.distance * sinf(earth.angle);
-            DrawCircleLinesV(sun_center, earth.distance, GRAY);
-            DrawCircleV(earth_pos, earth.radius, earth.colour);
+            DrawCircle(sun_pos.x, sun_pos.y, 20, YELLOW);
+            for (int i = 0; i < PLANET_COUNT; i++) {
+                rendered_planet_t p = rendered_planets[i]; 
+                vec2d_t v = get_planet_pos(&PLANETS[i], sim_date);
+                double distance = hypot(v.x, v.y);
+                double scalar = au_scale / sqrt(distance);
+                p.x = sun_pos.x + scalar * v.x;
+                p.y = sun_pos.y - scalar * v.y;
+                DrawCircle(p.x, p.y, p.radius, p.colour);
+            }
 
         EndDrawing();
     }
