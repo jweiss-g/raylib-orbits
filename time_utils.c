@@ -23,3 +23,9 @@ double gregorian_to_julian(int year, int month, int day)
 
     return floor(365.25 * (year + 4716)) + floor(30.6001 * (month + 1)) + day + b - 1524.5;
 }
+
+// Returns days elapsed since J2000 epoch (2451545.0)
+double days_since_j2000(int year, int month, int day)
+{
+    return gregorian_to_julian(year, month, day) - 2451545.0f;
+}
