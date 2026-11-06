@@ -2,6 +2,10 @@
 #include "time_utils.h"
 #include "orbit_utils.h"
 #include <math.h>
+#include <stdbool.h>
+
+#define RAYGUI_IMPLEMENTATION
+#include "raygui.h"
 
 #define YEAR_CHARS 4
 #define MONTH_CHARS 2
@@ -24,6 +28,10 @@ int main(void)
     const int SCREEN_HEIGHT = 800;
     double max_radius = MIN(SCREEN_WIDTH, SCREEN_HEIGHT) / 2.0 - 20;
     double au_scale = max_radius / sqrt(PLANETS[NEPTUNE].semimajor_axis);
+    bool is_paused = false;
+    bool btn_pause_pressed = false; 
+
+    GuiSetStyle(DEFAULT, TEXT_SIZE, 10);
 
     rendered_planet_t rendered_planets[PLANET_COUNT] = {
         [MERCURY] = { 0, 0, 4, GRAY },
@@ -48,7 +56,14 @@ int main(void)
 
     while (!WindowShouldClose())
     {
+        if (btn_pause_pressed) {
+            is_paused = !is_paused;
+        }
+
+        if (!is_paused) {
         sim_date += GetFrameTime() * days_per_second;
+        }
+
         BeginDrawing();
             DrawText(TextFormat("Days since J2000: %.2f", sim_date), 10, 10, 12, GRAY);
             ClearBackground(BLACK);
@@ -73,6 +88,8 @@ int main(void)
                 v = au_to_px(v, sun_pos, au_scale);
                 DrawCircle(v.x, v.y, p.radius, p.colour);
             }
+
+            btn_pause_pressed = GuiButton((Rectangle){ 10, SCREEN_HEIGHT - 35, 25, 25}, "#132#");
 
         EndDrawing();
     }
