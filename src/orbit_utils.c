@@ -1,39 +1,10 @@
 #include "raylib.h"
+#include "orbit_utils.h"
 #include <math.h>
 
 static const double JULIAN_CENTURY = 36525.0f;
 
-typedef enum {
-    MERCURY, 
-    VENUS, 
-    EARTH, 
-    MARS, 
-    JUPITER, 
-    SATURN, 
-    URANUS, 
-    NEPTUNE, 
-    PLANET_COUNT,
-} planet_id;
-
-typedef struct {
-    const char* name;
-    // keplerian elements required for 2d render
-    double semimajor_axis;              // AU
-    double eccentricity;                // radians
-    double mean_longitude;              // degrees
-    double perihelion_longitude;        // degrees
-
-    double semimajor_axis_rate;         // AU/Cy
-    double eccentricity_rate;           // rad/Cy
-    double mean_longitude_rate;         // deg/Cy
-    double perihelion_longitude_rate;   // deg/Cy
-} planet_t;
-
-typedef struct {
-    double x, y;
-} vec2d_t;
-
-static const planet_t PLANETS[PLANET_COUNT] = {
+const planet_t PLANETS[PLANET_COUNT] = {
     // from table 1: https://ssd.jpl.nasa.gov/planets/approx_pos.html
     [MERCURY] = { "Mercury", 0.38709927, 0.20563593, 252.25032350, 77.45779628, 
         0.00000037, 0.00001906, 149472.67411175, 0.16047689 },
