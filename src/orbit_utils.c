@@ -103,6 +103,6 @@ vec2d_t get_planet_pos(const planet_t *planet, double sim_date)
     // updated x and y positions
     vec2d_t v;
     v.x = x_prm * cos(peri_long) - y_prm * sin(peri_long);
-    v.y = x_prm * sin(peri_long) - y_prm * cos(peri_long);
+    v.y = x_prm * sin(peri_long) + y_prm * cos(peri_long);
     return v;
 }
