@@ -12,11 +12,12 @@ typedef struct {
     Color colour;
 } rendered_planet_t;
 
+
 int main(void)
 {
     const int SCREEN_WIDTH = 800;
     const int SCREEN_HEIGHT = 800;
-    double max_radius = MIN(SCREEN_WIDTH, SCREEN_HEIGHT) / 2 - 10;
+    double max_radius = MIN(SCREEN_WIDTH, SCREEN_HEIGHT) / 2.0 - 20;
     double au_scale = max_radius / sqrt(PLANETS[NEPTUNE].semimajor_axis);
 
     rendered_planet_t rendered_planets[PLANET_COUNT] = {
@@ -38,6 +39,7 @@ int main(void)
 
     double days_per_second = 30.0f;                     // sim time scale
     double sim_date = days_since_j2000(2000, 1, 1);
+    Vector2 vertices[128];
 
     while (!WindowShouldClose())
     {
@@ -46,6 +48,19 @@ int main(void)
             DrawText(TextFormat("Elapsed Time: %.2f", sim_date), 10, 10, 12, GRAY);
             ClearBackground(BLACK);
             DrawCircle(sun_pos.x, sun_pos.y, 20, YELLOW);
+            for (int i = 0; i < PLANET_COUNT; i++) {
+                for (int j = 0; j <= 128; j++) {
+                    double tmp = (2*PI * j) / 128;
+                    vec2d_t tmp_v = to_vec(&PLANETS[i], sim_date, tmp);
+                    double distance = hypot(tmp_v.x, tmp_v.y);
+                    double scalar = au_scale / sqrt(distance);
+                    double x = sun_pos.x + scalar * tmp_v.x;
+                    double y = sun_pos.y - scalar * tmp_v.y;
+                    Vector2 v = { x, y };
+                    vertices[j] = v;
+                }
+                DrawLineStrip(vertices, 129, GRAY);
+            }
             for (int i = 0; i < PLANET_COUNT; i++) {
                 rendered_planet_t p = rendered_planets[i]; 
                 vec2d_t v = get_planet_pos(&PLANETS[i], sim_date);

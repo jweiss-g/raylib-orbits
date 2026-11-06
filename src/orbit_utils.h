@@ -34,6 +34,7 @@ typedef struct {
 
 extern const planet_t PLANETS[PLANET_COUNT];
 
+vec2d_t to_vec(const planet_t *planet, double sim_date, double ecc_anomaly);
 vec2d_t get_planet_pos(const planet_t *planet, double sim_date);
 
 #endif

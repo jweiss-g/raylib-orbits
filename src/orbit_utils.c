@@ -52,6 +52,25 @@ double solve_kepler(double M, double e)
     return E;
 }
 
+vec2d_t to_vec(const planet_t *planet, double sim_date, double ecc_anomaly)
+{
+    double centuries = sim_date / JULIAN_CENTURY;
+
+    double majr_axis = planet->semimajor_axis + (planet->semimajor_axis_rate * centuries);
+    double ecc = planet->eccentricity + (planet->eccentricity_rate * centuries);
+    double peri_long = (planet->perihelion_longitude + (planet->perihelion_longitude_rate * centuries)) *DEG2RAD;
+    double minr_axis = majr_axis * sqrt(1 - pow(ecc, 2));
+
+    double x_prm = majr_axis * (cos(ecc_anomaly) - ecc);
+    double y_prm = minr_axis * sin(ecc_anomaly);
+
+    // updated x and y positions
+    vec2d_t v;
+    v.x = x_prm * cos(peri_long) - y_prm * sin(peri_long);
+    v.y = x_prm * sin(peri_long) + y_prm * cos(peri_long);
+    return v;
+}
+
 // returns a planet's (x, y) position in AU at a specified time
 vec2d_t get_planet_pos(const planet_t *planet, double sim_date)
 {
@@ -66,14 +85,5 @@ vec2d_t get_planet_pos(const planet_t *planet, double sim_date)
     // get mean anomaly, eccentric anomaly, and minor axis from updated values
     double mean_anomaly = fmod(mean_long - peri_long, 2.0f * PI); // or remainder()???
     double ecc_anomaly = solve_kepler(mean_anomaly, ecc);
-    double minr_axis = majr_axis * sqrt(1 - pow(ecc, 2));
-
-    double x_prm = majr_axis * (cos(ecc_anomaly) - ecc);
-    double y_prm = minr_axis * sin(ecc_anomaly);
-
-    // updated x and y positions
-    vec2d_t v;
-    v.x = x_prm * cos(peri_long) - y_prm * sin(peri_long);
-    v.y = x_prm * sin(peri_long) + y_prm * cos(peri_long);
-    return v;
+    return to_vec(planet, sim_date, ecc_anomaly);
 }
