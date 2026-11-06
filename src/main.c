@@ -3,6 +3,10 @@
 #include "orbit_utils.h"
 #include <math.h>
 
+#define YEAR_CHARS 4
+#define MONTH_CHARS 2
+#define DAY_CHARS 2
+
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
 typedef struct {
@@ -12,6 +16,7 @@ typedef struct {
     Color colour;
 } rendered_planet_t;
 
+vec2d_t au_to_px(vec2d_t v, vec2d_t sun_pos, double au_scale);
 
 int main(void)
 {
@@ -45,34 +50,41 @@ int main(void)
     {
         sim_date += GetFrameTime() * days_per_second;
         BeginDrawing();
-            DrawText(TextFormat("Elapsed Time: %.2f", sim_date), 10, 10, 12, GRAY);
+            DrawText(TextFormat("Days since J2000: %.2f", sim_date), 10, 10, 12, GRAY);
             ClearBackground(BLACK);
             DrawCircle(sun_pos.x, sun_pos.y, 20, YELLOW);
+
+            // draw planet orbits
             for (int i = 0; i < PLANET_COUNT; i++) {
                 for (int j = 0; j <= 128; j++) {
                     double tmp = (2*PI * j) / 128;
                     vec2d_t tmp_v = to_vec(&PLANETS[i], sim_date, tmp);
-                    double distance = hypot(tmp_v.x, tmp_v.y);
-                    double scalar = au_scale / sqrt(distance);
-                    double x = sun_pos.x + scalar * tmp_v.x;
-                    double y = sun_pos.y - scalar * tmp_v.y;
-                    Vector2 v = { x, y };
+                    tmp_v = au_to_px(tmp_v, sun_pos, au_scale);
+                    Vector2 v = { tmp_v.x, tmp_v.y };
                     vertices[j] = v;
                 }
                 DrawLineStrip(vertices, 129, GRAY);
             }
+
+            // draw planets
             for (int i = 0; i < PLANET_COUNT; i++) {
                 rendered_planet_t p = rendered_planets[i]; 
                 vec2d_t v = get_planet_pos(&PLANETS[i], sim_date);
-                double distance = hypot(v.x, v.y);
-                double scalar = au_scale / sqrt(distance);
-                p.x = sun_pos.x + scalar * v.x;
-                p.y = sun_pos.y - scalar * v.y;
-                DrawCircle(p.x, p.y, p.radius, p.colour);
+                v = au_to_px(v, sun_pos, au_scale);
+                DrawCircle(v.x, v.y, p.radius, p.colour);
             }
 
         EndDrawing();
     }
     CloseWindow();
     return 0;
+}
+
+vec2d_t au_to_px(vec2d_t v, vec2d_t sun_pos, double au_scale)
+{
+    double distance = hypot(v.x, v.y);
+    double scalar = au_scale / sqrt(distance);
+    v.x = sun_pos.x + scalar * v.x;
+    v.y = sun_pos.y - scalar * v.y; 
+    return v;
 }
