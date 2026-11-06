@@ -4,7 +4,7 @@
 // Returns the Julian Date at 00:00 UT for a Gregorian calendar date.
 // Valid for dates after Oct 15, 1582; does not validate its input.
 // Algorithm: Meeus, Astronomical Algorithms, ch. 7.
-double gregorian_to_julian(int year, int month, int day)
+static double gregorian_to_julian(int year, int month, int day)
 {
     // start year at march 1
     // jan and feb are 13th and 14th months of previous year
