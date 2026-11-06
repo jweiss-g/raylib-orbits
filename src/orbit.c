@@ -1,5 +1,6 @@
 #include "time_utils.h"
 #include "raylib.h"
+#include <math.h>
 
 typedef enum {
     MERCURY, 
