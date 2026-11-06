@@ -5,7 +5,7 @@ mkdir -p ".bin"
 
 set -e
 
-clang src/main.c -o .bin/main \
+clang src/*.c -o .bin/main \
   -I$(brew --prefix raylib)/include \
   -L$(brew --prefix raylib)/lib \
   -lraylib \
