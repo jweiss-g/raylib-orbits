@@ -1,0 +1,14 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+
+    // build current native
+    {
+      "label": "Build Raylib Project",
+      "type": "shell",
+      "command": "./.build/build.sh",
+      "group": { "kind": "build" },
+    }
+
+  ]
+}
