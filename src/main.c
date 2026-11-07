@@ -35,6 +35,7 @@ static const int SCREEN_HEIGHT = 800;
 static const double max_radius = MIN(SCREEN_WIDTH, SCREEN_HEIGHT) / 2.0 - 20;
 static const vec2d_t sun_pos = { (double)SCREEN_WIDTH / 2.0, (double)SCREEN_HEIGHT / 2.0 };
 
+void draw_solar_system(double sim_date);
 vec2d_t au_to_px(vec2d_t v);
 int clamp_day(int month, int day);
 
@@ -59,7 +60,6 @@ int main(void)
 
     double days_per_second = 0.5f;                     // sim time scale
     double sim_date = days_since_j2000(year, month, day);
-    Vector2 vertices[128];
 
     bool edit_year = false;
     bool edit_month = false;
@@ -77,27 +77,8 @@ int main(void)
 
         BeginDrawing();
             ClearBackground(BLACK);
-            DrawCircle(sun_pos.x, sun_pos.y, 20, YELLOW);
 
-            // draw planet orbits
-            for (int i = 0; i < PLANET_COUNT; i++) {
-                for (int j = 0; j <= 128; j++) {
-                    double tmp = (2*PI * j) / 128;
-                    vec2d_t tmp_v = to_vec(&PLANETS[i], sim_date, tmp);
-                    tmp_v = au_to_px(tmp_v);
-                    Vector2 v = { tmp_v.x, tmp_v.y };
-                    vertices[j] = v;
-                }
-                DrawLineStrip(vertices, 129, GRAY);
-            }
-
-            // draw planets
-            for (int i = 0; i < PLANET_COUNT; i++) {
-                rendered_planet_t p = rendered_planets[i]; 
-                vec2d_t v = get_planet_pos(&PLANETS[i], sim_date);
-                v = au_to_px(v);
-                DrawCircle(v.x, v.y, p.radius, p.colour);
-            }
+            draw_solar_system(sim_date);
 
             btn_pause_pressed = GuiButton((Rectangle){ 10, SCREEN_HEIGHT - 35, 25, 25}, "#132#");
 
@@ -138,6 +119,38 @@ int main(void)
     }
     CloseWindow();
     return 0;
+}
+
+void draw_orbit_rings(double sim_date) 
+{
+    Vector2 vertices[129];
+    for (int i = 0; i < PLANET_COUNT; i++) {
+        for (int j = 0; j <= 128; j++) {
+            double tmp = (2*PI * j) / 128;
+            vec2d_t tmp_v = to_vec(&PLANETS[i], sim_date, tmp);
+            tmp_v = au_to_px(tmp_v);
+            Vector2 v = { tmp_v.x, tmp_v.y };
+            vertices[j] = v;
+        }
+        DrawLineStrip(vertices, 129, GRAY);
+    }
+}
+
+void draw_planets(double sim_date)
+{
+    for (int i = 0; i < PLANET_COUNT; i++) {
+        rendered_planet_t p = rendered_planets[i]; 
+        vec2d_t v = get_planet_pos(&PLANETS[i], sim_date);
+        v = au_to_px(v);
+        DrawCircle(v.x, v.y, p.radius, p.colour);
+    }
+}
+
+void draw_solar_system(double sim_date)
+{
+    DrawCircle(sun_pos.x, sun_pos.y, 20, YELLOW);
+    draw_orbit_rings(sim_date);
+    draw_planets(sim_date);
 }
 
 vec2d_t au_to_px(vec2d_t v)
