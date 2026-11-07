@@ -3,6 +3,7 @@
 #include "orbit_utils.h"
 #include <math.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
@@ -21,17 +22,25 @@ typedef struct {
 } rendered_planet_t;
 
 vec2d_t au_to_px(vec2d_t v, vec2d_t sun_pos, double au_scale);
+int clamp_day(int month, int day);
 
 int main(void)
 {
     const int SCREEN_WIDTH = 800;
     const int SCREEN_HEIGHT = 800;
-    double max_radius = MIN(SCREEN_WIDTH, SCREEN_HEIGHT) / 2.0 - 20;
-    double au_scale = max_radius / sqrt(PLANETS[NEPTUNE].semimajor_axis);
+    const double max_radius = MIN(SCREEN_WIDTH, SCREEN_HEIGHT) / 2.0 - 20;
+    const double au_scale = max_radius / sqrt(PLANETS[NEPTUNE].semimajor_axis);
+
+    int year = 2000;
+    int month = 1;
+    int day = 1;
+
+    Rectangle year_box  = { 45, SCREEN_HEIGHT - 35, 50, 25 };
+    Rectangle month_box = { 105, SCREEN_HEIGHT - 35, 25, 25 };
+    Rectangle day_box   = { 140, SCREEN_HEIGHT - 35, 25, 25 };
+
     bool is_paused = false;
     bool btn_pause_pressed = false; 
-
-    GuiSetStyle(DEFAULT, TEXT_SIZE, 10);
 
     rendered_planet_t rendered_planets[PLANET_COUNT] = {
         [MERCURY] = { 0, 0, 4, GRAY },
@@ -51,8 +60,12 @@ int main(void)
     SetTargetFPS(60);
 
     double days_per_second = 30.0f;                     // sim time scale
-    double sim_date = days_since_j2000(2000, 1, 1);
+    double sim_date = days_since_j2000(year, month, day);
     Vector2 vertices[128];
+
+    bool edit_year = false;
+    bool edit_month = false;
+    bool edit_day = false;
 
     while (!WindowShouldClose())
     {
@@ -61,11 +74,10 @@ int main(void)
         }
 
         if (!is_paused) {
-        sim_date += GetFrameTime() * days_per_second;
+            sim_date += GetFrameTime() * days_per_second;
         }
 
         BeginDrawing();
-            DrawText(TextFormat("Days since J2000: %.2f", sim_date), 10, 10, 12, GRAY);
             ClearBackground(BLACK);
             DrawCircle(sun_pos.x, sun_pos.y, 20, YELLOW);
 
@@ -91,6 +103,39 @@ int main(void)
 
             btn_pause_pressed = GuiButton((Rectangle){ 10, SCREEN_HEIGHT - 35, 25, 25}, "#132#");
 
+            if (GuiValueBox(year_box, NULL, &year, 1, 9999, edit_year)) {
+                if (is_paused) {
+                    if (edit_year) sim_date = days_since_j2000(year, month, day);
+                    edit_year = !edit_year;
+                }
+            }
+
+            if (GuiValueBox(month_box, NULL, &month, 1, 12, edit_month)) {
+                if (is_paused) {
+                    if (edit_month) {
+                        day = clamp_day(month, day);
+                        sim_date = days_since_j2000(year, month, day);
+                    }
+                    edit_month = !edit_month;
+                }
+            }
+
+            if (GuiValueBox(day_box, NULL, &day, 1, 31, edit_day)) {
+                if (is_paused) {
+                    if (edit_day) {
+                        day = clamp_day(month, day);
+                        sim_date = days_since_j2000(year, month, day);
+                    }
+                    edit_day = !edit_day;
+                }
+            }
+
+            if (!is_paused) {
+                edit_year = false;
+                edit_month = false;
+                edit_day = false;
+            }
+
         EndDrawing();
     }
     CloseWindow();
@@ -104,4 +149,11 @@ vec2d_t au_to_px(vec2d_t v, vec2d_t sun_pos, double au_scale)
     v.x = sun_pos.x + scalar * v.x;
     v.y = sun_pos.y - scalar * v.y; 
     return v;
+}
+
+int clamp_day(int month, int day)
+{
+    int d[12] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+    if (day > d[month-1]) day = d[month-1];
+    return day;
 }
