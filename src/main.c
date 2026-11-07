@@ -91,7 +91,10 @@ int main(void)
                     if (edit_year) {
                         day = clamp_day(year, month, day);
                         sim_date = days_since_j2000(year, month, day);
-                    } 
+                    } else {
+                        // clear the old value when editing
+                        year = 0;
+                    }
                     edit_year = !edit_year;
                 }
             }
@@ -101,6 +104,9 @@ int main(void)
                     if (edit_month) {
                         day = clamp_day(year, month, day);
                         sim_date = days_since_j2000(year, month, day);
+                    } else {
+                        // clear the old value when editing
+                        month = 0;
                     }
                     edit_month = !edit_month;
                 }
@@ -111,6 +117,9 @@ int main(void)
                     if (edit_day) {
                         day = clamp_day(year, month, day);
                         sim_date = days_since_j2000(year, month, day);
+                    } else {
+                        // clear the old value when editing
+                        day = 0;
                     }
                     edit_day = !edit_day;
                 }
