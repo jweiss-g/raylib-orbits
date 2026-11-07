@@ -15,21 +15,31 @@
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
 typedef struct {
-    double x;
-    double y;
     int radius;
     Color colour;
 } rendered_planet_t;
 
-vec2d_t au_to_px(vec2d_t v, vec2d_t sun_pos, double au_scale);
+static const rendered_planet_t rendered_planets[PLANET_COUNT] = {
+    [MERCURY] = { 4, GRAY },
+    [VENUS]   = { 4, BEIGE },
+    [EARTH]   = { 6, SKYBLUE },
+    [MARS]    = { 6, MAROON },
+    [JUPITER] = { 12, BEIGE },
+    [SATURN]  = { 10, BEIGE },
+    [URANUS]  = { 8, BLUE },
+    [NEPTUNE] = { 8, DARKBLUE },
+};
+
+static const int SCREEN_WIDTH = 800;
+static const int SCREEN_HEIGHT = 800;
+static const double max_radius = MIN(SCREEN_WIDTH, SCREEN_HEIGHT) / 2.0 - 20;
+static const vec2d_t sun_pos = { (double)SCREEN_WIDTH / 2.0, (double)SCREEN_HEIGHT / 2.0 };
+
+vec2d_t au_to_px(vec2d_t v);
 int clamp_day(int month, int day);
 
 int main(void)
 {
-    const int SCREEN_WIDTH = 800;
-    const int SCREEN_HEIGHT = 800;
-    const double max_radius = MIN(SCREEN_WIDTH, SCREEN_HEIGHT) / 2.0 - 20;
-    const double au_scale = max_radius / sqrt(PLANETS[NEPTUNE].semimajor_axis);
 
     int year = 2000;
     int month = 1;
@@ -42,24 +52,12 @@ int main(void)
     bool is_paused = false;
     bool btn_pause_pressed = false; 
 
-    rendered_planet_t rendered_planets[PLANET_COUNT] = {
-        [MERCURY] = { 0, 0, 4, GRAY },
-        [VENUS]   = { 0, 0, 4, BEIGE },
-        [EARTH]   = { 0, 0, 6, SKYBLUE },
-        [MARS]    = { 0, 0, 6, MAROON },
-        [JUPITER] = { 0, 0, 12, BEIGE },
-        [SATURN]  = { 0, 0, 10, BEIGE },
-        [URANUS]  = { 0, 0, 8, BLUE },
-        [NEPTUNE] = { 0, 0, 8, DARKBLUE },
-    };
-
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "orbits");
 
-    vec2d_t sun_pos = { (double)SCREEN_WIDTH / 2.0, (double)SCREEN_HEIGHT / 2.0 };
 
     SetTargetFPS(60);
 
-    double days_per_second = 30.0f;                     // sim time scale
+    double days_per_second = 0.5f;                     // sim time scale
     double sim_date = days_since_j2000(year, month, day);
     Vector2 vertices[128];
 
@@ -86,7 +84,7 @@ int main(void)
                 for (int j = 0; j <= 128; j++) {
                     double tmp = (2*PI * j) / 128;
                     vec2d_t tmp_v = to_vec(&PLANETS[i], sim_date, tmp);
-                    tmp_v = au_to_px(tmp_v, sun_pos, au_scale);
+                    tmp_v = au_to_px(tmp_v);
                     Vector2 v = { tmp_v.x, tmp_v.y };
                     vertices[j] = v;
                 }
@@ -97,7 +95,7 @@ int main(void)
             for (int i = 0; i < PLANET_COUNT; i++) {
                 rendered_planet_t p = rendered_planets[i]; 
                 vec2d_t v = get_planet_pos(&PLANETS[i], sim_date);
-                v = au_to_px(v, sun_pos, au_scale);
+                v = au_to_px(v);
                 DrawCircle(v.x, v.y, p.radius, p.colour);
             }
 
@@ -142,8 +140,9 @@ int main(void)
     return 0;
 }
 
-vec2d_t au_to_px(vec2d_t v, vec2d_t sun_pos, double au_scale)
+vec2d_t au_to_px(vec2d_t v)
 {
+    const double au_scale = max_radius / sqrt(PLANETS[NEPTUNE].semimajor_axis);
     double distance = hypot(v.x, v.y);
     double scalar = au_scale / sqrt(distance);
     v.x = sun_pos.x + scalar * v.x;
