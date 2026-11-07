@@ -2,6 +2,11 @@
 #include "time_utils.h"
 #include "orbit_utils.h"
 #include <math.h>
+#include <stdbool.h>
+#include <stdlib.h>
+
+#define RAYGUI_IMPLEMENTATION
+#include "raygui.h"
 
 #define YEAR_CHARS 4
 #define MONTH_CHARS 2
@@ -10,68 +15,120 @@
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
 typedef struct {
-    double x;
-    double y;
     int radius;
     Color colour;
 } rendered_planet_t;
 
-vec2d_t au_to_px(vec2d_t v, vec2d_t sun_pos, double au_scale);
+static const rendered_planet_t rendered_planets[PLANET_COUNT] = {
+    [MERCURY] = { 4, GRAY },
+    [VENUS]   = { 4, BEIGE },
+    [EARTH]   = { 6, SKYBLUE },
+    [MARS]    = { 6, MAROON },
+    [JUPITER] = { 12, BEIGE },
+    [SATURN]  = { 10, BEIGE },
+    [URANUS]  = { 8, BLUE },
+    [NEPTUNE] = { 8, DARKBLUE },
+};
+
+static const int SCREEN_WIDTH = 800;
+static const int SCREEN_HEIGHT = 800;
+static const double max_radius = MIN(SCREEN_WIDTH, SCREEN_HEIGHT) / 2.0 - 20;
+static const vec2d_t sun_pos = { (double)SCREEN_WIDTH / 2.0, (double)SCREEN_HEIGHT / 2.0 };
+
+void draw_solar_system(double sim_date);
+vec2d_t au_to_px(vec2d_t v);
+int clamp_day(int year, int month, int day);
 
 int main(void)
 {
-    const int SCREEN_WIDTH = 800;
-    const int SCREEN_HEIGHT = 800;
-    double max_radius = MIN(SCREEN_WIDTH, SCREEN_HEIGHT) / 2.0 - 20;
-    double au_scale = max_radius / sqrt(PLANETS[NEPTUNE].semimajor_axis);
 
-    rendered_planet_t rendered_planets[PLANET_COUNT] = {
-        [MERCURY] = { 0, 0, 4, GRAY },
-        [VENUS]   = { 0, 0, 4, BEIGE },
-        [EARTH]   = { 0, 0, 6, SKYBLUE },
-        [MARS]    = { 0, 0, 6, MAROON },
-        [JUPITER] = { 0, 0, 12, BEIGE },
-        [SATURN]  = { 0, 0, 10, BEIGE },
-        [URANUS]  = { 0, 0, 8, BLUE },
-        [NEPTUNE] = { 0, 0, 8, DARKBLUE },
-    };
+    int year = 2000;
+    int month = 1;
+    int day = 1;
+
+    Rectangle year_box  = { 45, SCREEN_HEIGHT - 35, 50, 25 };
+    Rectangle month_box = { 105, SCREEN_HEIGHT - 35, 25, 25 };
+    Rectangle day_box   = { 140, SCREEN_HEIGHT - 35, 25, 25 };
+
+    bool is_paused = false;
+    bool btn_pause_pressed = false; 
 
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "orbits");
 
-    vec2d_t sun_pos = { (double)SCREEN_WIDTH / 2.0, (double)SCREEN_HEIGHT / 2.0 };
 
     SetTargetFPS(60);
 
-    double days_per_second = 30.0f;                     // sim time scale
-    double sim_date = days_since_j2000(2000, 1, 1);
-    Vector2 vertices[128];
+    double days_per_second = 0.5f;                     // sim time scale
+    double sim_date = days_since_j2000(year, month, day);
+
+    bool edit_year = false;
+    bool edit_month = false;
+    bool edit_day = false;
 
     while (!WindowShouldClose())
     {
-        sim_date += GetFrameTime() * days_per_second;
-        BeginDrawing();
-            DrawText(TextFormat("Days since J2000: %.2f", sim_date), 10, 10, 12, GRAY);
-            ClearBackground(BLACK);
-            DrawCircle(sun_pos.x, sun_pos.y, 20, YELLOW);
+        if (btn_pause_pressed) {
+            is_paused = !is_paused;
+        }
 
-            // draw planet orbits
-            for (int i = 0; i < PLANET_COUNT; i++) {
-                for (int j = 0; j <= 128; j++) {
-                    double tmp = (2*PI * j) / 128;
-                    vec2d_t tmp_v = to_vec(&PLANETS[i], sim_date, tmp);
-                    tmp_v = au_to_px(tmp_v, sun_pos, au_scale);
-                    Vector2 v = { tmp_v.x, tmp_v.y };
-                    vertices[j] = v;
+        if (!is_paused) {
+            sim_date += GetFrameTime() * days_per_second;
+        }
+
+        gregdate_t cal = jd_to_greg(sim_date);
+
+        DrawText(TextFormat("Simulation date: %04d/%02d/%02d",cal.year, cal.month, cal.day), 10, 10, 18, GRAY);
+
+        BeginDrawing();
+            ClearBackground(BLACK);
+
+            draw_solar_system(sim_date);
+
+            btn_pause_pressed = GuiButton((Rectangle){ 10, SCREEN_HEIGHT - 35, 25, 25}, "#132#");
+
+            if (GuiValueBox(year_box, NULL, &year, 1, 9999, edit_year)) {
+                if (is_paused) {
+                    if (edit_year) {
+                        day = clamp_day(year, month, day);
+                        sim_date = days_since_j2000(year, month, day);
+                    } else {
+                        // clear the old value when editing
+                        year = 0;
+                    }
+                    edit_year = !edit_year;
                 }
-                DrawLineStrip(vertices, 129, GRAY);
             }
 
-            // draw planets
-            for (int i = 0; i < PLANET_COUNT; i++) {
-                rendered_planet_t p = rendered_planets[i]; 
-                vec2d_t v = get_planet_pos(&PLANETS[i], sim_date);
-                v = au_to_px(v, sun_pos, au_scale);
-                DrawCircle(v.x, v.y, p.radius, p.colour);
+            if (GuiValueBox(month_box, NULL, &month, 1, 12, edit_month)) {
+                if (is_paused) {
+                    if (edit_month) {
+                        day = clamp_day(year, month, day);
+                        sim_date = days_since_j2000(year, month, day);
+                    } else {
+                        // clear the old value when editing
+                        month = 0;
+                    }
+                    edit_month = !edit_month;
+                }
+            }
+
+            if (GuiValueBox(day_box, NULL, &day, 1, 31, edit_day)) {
+                if (is_paused) {
+                    if (edit_day) {
+                        day = clamp_day(year, month, day);
+                        sim_date = days_since_j2000(year, month, day);
+                    } else {
+                        // clear the old value when editing
+                        day = 0;
+                    }
+                    edit_day = !edit_day;
+                }
+            }
+
+            if (!is_paused) {
+                edit_year = false;
+                edit_month = false;
+                edit_day = false;
             }
 
         EndDrawing();
@@ -80,11 +137,52 @@ int main(void)
     return 0;
 }
 
-vec2d_t au_to_px(vec2d_t v, vec2d_t sun_pos, double au_scale)
+void draw_orbit_rings(double sim_date) 
 {
+    Vector2 vertices[129];
+    for (int i = 0; i < PLANET_COUNT; i++) {
+        for (int j = 0; j <= 128; j++) {
+            double tmp = (2*PI * j) / 128;
+            vec2d_t tmp_v = to_vec(&PLANETS[i], sim_date, tmp);
+            tmp_v = au_to_px(tmp_v);
+            Vector2 v = { tmp_v.x, tmp_v.y };
+            vertices[j] = v;
+        }
+        DrawLineStrip(vertices, 129, GRAY);
+    }
+}
+
+void draw_planets(double sim_date)
+{
+    for (int i = 0; i < PLANET_COUNT; i++) {
+        rendered_planet_t p = rendered_planets[i]; 
+        vec2d_t v = get_planet_pos(&PLANETS[i], sim_date);
+        v = au_to_px(v);
+        DrawCircle(v.x, v.y, p.radius, p.colour);
+    }
+}
+
+void draw_solar_system(double sim_date)
+{
+    DrawCircle(sun_pos.x, sun_pos.y, 20, YELLOW);
+    draw_orbit_rings(sim_date);
+    draw_planets(sim_date);
+}
+
+vec2d_t au_to_px(vec2d_t v)
+{
+    const double au_scale = max_radius / sqrt(PLANETS[NEPTUNE].semimajor_axis);
     double distance = hypot(v.x, v.y);
     double scalar = au_scale / sqrt(distance);
     v.x = sun_pos.x + scalar * v.x;
     v.y = sun_pos.y - scalar * v.y; 
     return v;
+}
+
+int clamp_day(int year, int month, int day)
+{
+    int d[12] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+    if (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)) d[1]++;
+    if (day > d[month-1]) day = d[month-1];
+    return day;
 }
