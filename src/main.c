@@ -37,7 +37,7 @@ static const vec2d_t sun_pos = { (double)SCREEN_WIDTH / 2.0, (double)SCREEN_HEIG
 
 void draw_solar_system(double sim_date);
 vec2d_t au_to_px(vec2d_t v);
-int clamp_day(int month, int day);
+int clamp_day(int year, int month, int day);
 
 int main(void)
 {
@@ -84,7 +84,10 @@ int main(void)
 
             if (GuiValueBox(year_box, NULL, &year, 1, 9999, edit_year)) {
                 if (is_paused) {
-                    if (edit_year) sim_date = days_since_j2000(year, month, day);
+                    if (edit_year) {
+                        day = clamp_day(year, month, day);
+                        sim_date = days_since_j2000(year, month, day);
+                    } 
                     edit_year = !edit_year;
                 }
             }
@@ -92,7 +95,7 @@ int main(void)
             if (GuiValueBox(month_box, NULL, &month, 1, 12, edit_month)) {
                 if (is_paused) {
                     if (edit_month) {
-                        day = clamp_day(month, day);
+                        day = clamp_day(year, month, day);
                         sim_date = days_since_j2000(year, month, day);
                     }
                     edit_month = !edit_month;
@@ -102,7 +105,7 @@ int main(void)
             if (GuiValueBox(day_box, NULL, &day, 1, 31, edit_day)) {
                 if (is_paused) {
                     if (edit_day) {
-                        day = clamp_day(month, day);
+                        day = clamp_day(year, month, day);
                         sim_date = days_since_j2000(year, month, day);
                     }
                     edit_day = !edit_day;
@@ -163,9 +166,10 @@ vec2d_t au_to_px(vec2d_t v)
     return v;
 }
 
-int clamp_day(int month, int day)
+int clamp_day(int year, int month, int day)
 {
     int d[12] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+    if (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)) d[1]++;
     if (day > d[month-1]) day = d[month-1];
     return day;
 }
