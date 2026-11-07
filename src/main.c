@@ -75,6 +75,10 @@ int main(void)
             sim_date += GetFrameTime() * days_per_second;
         }
 
+        gregdate_t cal = jd_to_greg(sim_date);
+
+        DrawText(TextFormat("Simulation date: %04d/%02d/%02d",cal.year, cal.month, cal.day), 10, 10, 18, GRAY);
+
         BeginDrawing();
             ClearBackground(BLACK);
 
